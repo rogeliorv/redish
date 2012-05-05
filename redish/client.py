@@ -32,12 +32,8 @@ class Client(object):
 
     """
 
-    host = "localhost"
-    port = DEFAULT_PORT
-    db = None
     serializer = Pickler()
-    #serializer = anyjson
-    
+    #serializer = anyjson    
     MEMOIZE_PREFIX = 'memoized:'
     # Useful constants for the memoization timeout
     DAY = 24 * 3600
@@ -45,13 +41,9 @@ class Client(object):
     HOUR = 3600
 
 
-    def __init__(self, host=None, port=None, db=None,
-            serializer=None):
-        self.host = host or self.host
-        self.port = port or self.port
-        self.serializer = serializer or self.serializer
-        self.db = db or self.db
-        self.api = _RedisClient(self.host, self.port, self.db)
+    def __init__(self, *args, **kwargs):        
+        self.serializer = kwargs.get('serializer', self.serializer)
+        self.api = _RedisClient(*args, **kwargs)
 
     def id(self, name):
         """Return the next id for a name."""
