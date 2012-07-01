@@ -10,12 +10,6 @@ try:
 except ImportError:
     import pickle
     
-import hashlib
-
-
-DEFAULT_PORT = 6379
-
-
 class Client(object):
     """Redis Client
 
@@ -34,8 +28,7 @@ class Client(object):
 
     serializer = Pickler()
     #serializer = anyjson    
-    MEMOIZE_PREFIX = 'memoized:'
-    # Useful constants for the memoization timeout
+    # Useful constants for timeouts
     DAY = 24 * 3600
     WEEK = 7 * 24 * 3600
     HOUR = 3600
@@ -222,54 +215,5 @@ class Client(object):
     def __contains__(self, name):
         """``x.__contains__(name) <==> name in x``"""
         return self.api.exists(mkey(name))
-
-    def __repr__(self):
-        """``x.__repr__() <==> repr(x)``"""
-        return "<RedisClient: %s:%s/%s>" % (self.host,
-                                           self.port,
-                                           self.db or "")
     
-    # TODO: Change memoization to use serializer instead of pickle directly
-    def memoize(self, timeout, key_generator = None, use_prefix = True):
-        '''Memoizes function results. Makes redis act as a cache.
-        The purpose of this function is avoid re-executing certain tasks.
-        Every time the decorated function is executed we check the cache, if there is
-        anything in the cache under that key, we return the value in the cache
-        
-        @key_generator A function that generates the key in which the result will be stored
-        @timeout The expiration for the saved value. The result can expire after some
-        time, a subsequent call will result in recomputation. (Good for API calls).
-        If no timeout is given the key never expires.
-        '''
-                
-        key_generator = key_generator or self.simple_key_generator
-        redis_instance = self
-        
-        def wrapper(func):
-            def wrapped(*args, **kwargs):                
-                key = key_generator(func, args, kwargs)
-                if use_prefix: key = redis_instance.MEMOIZE_PREFIX + key 
-                result = redis_instance.api.get(key)
-                if result:
-                    return pickle.loads(result)
-                else:
-                    result = func(*args, **kwargs)
-                    redis_instance.api.set(key, pickle.dumps(result))                    
-                    if timeout > 0:
-                        redis_instance.api.expire(key, timeout)
-                    return result
-            return wrapped
-        return wrapper
-        
-        
-    def simple_key_generator(self, func, *args, **kwargs):
-        '''Returns base_string(args=args, kwargs=kwargs) as the key. Useful for
-        identifying your calls as keys in the cache.'''            
-        return '%s(args=%s, kwargs=%s)' % (func.func_name, unicode(args), unicode(kwargs))
-    
-    def sha_key_generator(self, func, *args, **kwargs):
-        '''Gives the function name and the arguments to the sha512 algorithms and
-        returns the hexdigest'''
-        sha = hashlib.sha512()
-        sha.update(func.func_name + unicode(args) + unicode(kwargs))
-        return sha.hexdigest()
+ 
